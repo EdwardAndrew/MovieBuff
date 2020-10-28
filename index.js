@@ -34,7 +34,7 @@ client.on('ready', () => {
 client.on('message', async msg => {
     if (msg.mentions.users.first() != client.user && !msg.content.startsWith('!moviebuff')) return;
     if (msg.member.id == client.user) return;
-    if(msg.guild.id == '771121281495597117') {
+    if (msg.guild.id == '771121281495597117') {
         msg.reply('ok');
         return;
     }
@@ -66,7 +66,7 @@ const search = async msg => {
             const { data } = await movieAPI.get('/', {
                 params: {
                     t: movie,
-                    plot: 'short'
+                    plot: 'full'
                 }
             });
             movieData = data;
@@ -90,24 +90,18 @@ const search = async msg => {
         return;
     }
 
-    const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
-    const embed = new Discord.MessageEmbed();
+    console.log('DATA', movieData);
 
-    if (movieData.Poster != 'N/A') embed.setImage(movieData.Poster);
-    embed.title = movieData.Title;
-    embed.url = `https://www.imdb.com/title/${movieData.imdbID}/`;
-    if(embed.description == 'N/A') {
+    const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
+    const embed = getEmbed(movieData, askedBeforeCount)
+
+
+    if (embed.description == 'N/A') {
         embed.description = "There's no description available."
     } else {
         embed.description = movieData.Plot;
     }
-    embed.addField('Director', movieData.Director, true);
-    embed.addField('Released', movieData.Released, true);
-    embed.addField('Genre', movieData.Genre, true);
-    embed.addField('Actors', movieData.Actors, true);
-    embed.addField('Runtime', movieData.Runtime, true);
-    embed.setFooter(getAskedBeforeText(askedBeforeCount));
-    embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
+
 
     msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
 }
@@ -118,11 +112,49 @@ const getAskedBeforeText = count => {
             return "I've not been asked about this one for a long time.";
         case 1:
             return "Somebody asked me about this recently...";
-        case 2: 
+        case 2:
             return "I've been asked about this twice recently...";
         default:
             return `I've been asked about this ${count - 1} times recently...`
     }
+}
+
+const getEmbed = (data, askCount) => {
+    const embed = new Discord.MessageEmbed({
+        description: data.Description == 'N/A' ? "There's no description available." : data.Description,
+    });
+    embed.addField('Genre', data.Genre, true);
+    embed.setFooter(getAskedBeforeText(askCount));
+    embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
+    if (data.Poster != 'N/A') embed.setImage(data.Poster);
+    embed.title = data.Title;
+    embed.url = `https://www.imdb.com/title/${data.imdbID}/`;
+    embed.addField('Actors', data.Actors, true);
+
+    switch (data.Type) {
+        case 'series':
+            embed.addField('Seasons', data.totalSeasons, true);
+            embed.addField('Writer', data.Writer, true);
+            embed.addField('Year', data.Year, true);
+            embed.addField('Language', data.Language, true);
+            break;
+        default:
+            embed.addField('Runtime', data.Runtime, true);
+            embed.addField('Director', data.Director, true);
+            if(data.Released == 'N/A'){
+                embed.addField('Year', data.Year, true);
+            } else {
+                embed.addField('Released', data.Released, true);
+            }
+            embed.addField('Language', data.Language, true);
+            break;
+    }
+    if (data.Awards != 'N/A') {
+        embed.addField('Awards', data.Awards, false)
+    }
+
+
+    return embed;
 }
 
 
