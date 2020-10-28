@@ -22,16 +22,36 @@ const movieAPI = axios.create({
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    client.user.setPresence({
+        activity: {
+            name: "@MovieBuff help",
+            type: "WATCHING",
+        }
+    })
 });
 
 client.on('message', async msg => {
-    if (msg.mentions.users.first() != client.user) return;
+    if (msg.mentions.users.first() != client.user && !msg.content.startsWith('!moviebuff')) return;
+    if (msg.member.id == client.user) return;
+
+    const command = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
+    if (command.length == 0) {
+        msg.react('👀')
+        msg.reply(`*Yes?* What would you like to ask me about? (Try '<@${client.user.id}> Star Wars')`)
+        return;
+    }
     msg.react('🎬');
-    await search(msg);
+
+    if (command.toLowerCase() == 'help') {
+        msg.channel.send("I'd love to help you.... Please ask Ed to finish this bit! 😅")
+    }
+    else {
+        await search(msg);
+    }
 });
 
 const search = async msg => {
-    const movie = msg.content.split(' ').slice(1, msg.content.length).join(' ')
+    const movie = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
     const cacheKey = movie.toLowerCase();
     const cachedData = await redis.get(`${moviePrefix}${cacheKey}`);
 
@@ -44,14 +64,13 @@ const search = async msg => {
                     plot: 'short'
                 }
             });
-            if (data.Response == 'false') {
-                console.log(data);
-                msg.channel.send(`I've not heard of that before, sorry!`);
-                redis.set(`${moviePrefix}${cacheKey}`, null, 'ex', 24 * 60 * 60);
-                return;
-            }
             movieData = data;
-            redis.set(`${moviePrefix}${cacheKey}`, JSON.stringify(movieData));
+            if (movieData.Response == 'false') {
+                redis.set(`${moviePrefix}${cacheKey}`, null, 'ex', 24 * 60 * 60);
+            }
+            else {
+                redis.set(`${moviePrefix}${cacheKey}`, JSON.stringify(movieData));
+            }
         } catch (err) {
             console.error(err);
             msg.channel.send('Oops! We encountered a problem while searching. Please try later!');
@@ -60,7 +79,13 @@ const search = async msg => {
     } else {
         movieData = JSON.parse(cachedData);
     }
+    if (movieData.Response.toLowerCase() == 'false') {
+        msg.react('😭');
+        msg.channel.send(`I've not heard of that before, sorry!`);
+        return;
+    }
 
+    const askedBeforeCount = await redis.incr(`count/${movieData.Title}`);
     const embed = new Discord.MessageEmbed();
 
     if (movieData.Poster != 'N/A') embed.setImage(movieData.Poster);
@@ -72,10 +97,21 @@ const search = async msg => {
     embed.addField('Genre', movieData.Genre, true);
     embed.addField('Actors', movieData.Actors, true);
     embed.addField('Runtime', movieData.Runtime, true);
-    embed.setFooter('');
+    embed.setFooter(getAskedBeforeText(askedBeforeCount));
     embed.setAuthor('MovieBuff');
 
-    msg.channel.send(`Here's what I can tell you about *${movieData.Title}*.`, embed)
+    msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
+}
+
+const getAskedBeforeText = count => {
+    switch (count - 1) {
+        case 0:
+            return "I've not been asked about this one for a long time.";
+        case 1:
+            return "Somebody asked me about this recently...";
+        default:
+            return `I've been asked about this ${count - 1} times recently...`
+    }
 }
 
 
