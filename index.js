@@ -15,7 +15,7 @@ const countPrefix = 'moviebuff/count/';
 
 const movieAPI = axios.create({
     baseURL: 'http://www.omdbapi.com/',
-    timeout: '2000',
+    timeout: '4000',
     params: {
         apikey: config.OMDB_API_KEY
     }
