@@ -10,7 +10,8 @@ const config = {
     DISCORD_TOKEN: process.env['DISCORD_TOKEN']
 }
 
-const moviePrefix = 'movie/';
+const moviePrefix = 'moviebuff/movie/';
+const countPrefix = 'moviebuff/count/';
 
 const movieAPI = axios.create({
     baseURL: 'http://www.omdbapi.com/',
@@ -33,6 +34,10 @@ client.on('ready', () => {
 client.on('message', async msg => {
     if (msg.mentions.users.first() != client.user && !msg.content.startsWith('!moviebuff')) return;
     if (msg.member.id == client.user) return;
+    if(msg.guild.id == '771121281495597117') {
+        msg.reply('ok');
+        return;
+    }
 
     const command = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
     if (command.length == 0) {
@@ -85,20 +90,24 @@ const search = async msg => {
         return;
     }
 
-    const askedBeforeCount = await redis.incr(`count/${movieData.Title}`);
+    const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
     const embed = new Discord.MessageEmbed();
 
     if (movieData.Poster != 'N/A') embed.setImage(movieData.Poster);
     embed.title = movieData.Title;
     embed.url = `https://www.imdb.com/title/${movieData.imdbID}/`;
-    embed.description = movieData.Plot;
+    if(embed.description == 'N/A') {
+        embed.description = "There's no description available."
+    } else {
+        embed.description = movieData.Plot;
+    }
     embed.addField('Director', movieData.Director, true);
     embed.addField('Released', movieData.Released, true);
     embed.addField('Genre', movieData.Genre, true);
     embed.addField('Actors', movieData.Actors, true);
     embed.addField('Runtime', movieData.Runtime, true);
     embed.setFooter(getAskedBeforeText(askedBeforeCount));
-    embed.setAuthor('MovieBuff');
+    embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
 
     msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
 }
@@ -109,6 +118,8 @@ const getAskedBeforeText = count => {
             return "I've not been asked about this one for a long time.";
         case 1:
             return "Somebody asked me about this recently...";
+        case 2: 
+            return "I've been asked about this twice recently...";
         default:
             return `I've been asked about this ${count - 1} times recently...`
     }
