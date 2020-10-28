@@ -109,13 +109,13 @@ const search = async msg => {
 const getAskedBeforeText = count => {
     switch (count - 1) {
         case 0:
-            return "I've not been asked about this one for a long time.";
+            return "I've not been asked about this one before.";
         case 1:
-            return "Somebody asked me about this recently...";
+            return "Somebody asked me about this before...";
         case 2:
-            return "I've been asked about this twice recently...";
+            return "I've been asked about this twice...";
         default:
-            return `I've been asked about this ${count - 1} times recently...`
+            return `I've been asked about this ${count - 1} times...`
     }
 }
 
