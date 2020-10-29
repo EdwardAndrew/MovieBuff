@@ -16,8 +16,9 @@ const movieAPI = axios.create({
 
 const moviePrefix = 'moviebuff/movie/';
 const countPrefix = 'moviebuff/count/';
+const maxDescriptionLength = 990;
 
-export const search = async (msg : Message) => {
+export const search = async (msg: Message) => {
     const movie = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
     const cacheKey = movie.toLowerCase();
     const cachedData = await redis.get(`${moviePrefix}${cacheKey}`);
@@ -58,13 +59,6 @@ export const search = async (msg : Message) => {
     const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
     const embed = getEmbed(movieData, askedBeforeCount)
 
-
-    if (embed.description == 'N/A') {
-        embed.description = "There's no description available."
-    } else {
-        embed.description = movieData.Plot;
-    }
-
     msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
 }
 
@@ -82,9 +76,18 @@ const getAskedBeforeText = (count: number) => {
 }
 
 const getEmbed = (data: any, askCount: number) => {
-    const embed = new MessageEmbed({
-        description: data.Description == 'N/A' ? "There's no description available." : data.Description,
-    });
+    const embed = new MessageEmbed();
+    if (data.Plot.length > maxDescriptionLength) {
+        const text = data.Plot.slice(0, maxDescriptionLength - 3).trim().concat('...');
+        embed.setDescription(text);
+    } else if (data.Plot == 'N/A') {
+        embed.setDescription("No description is available.")
+    } else {
+        embed.setDescription(data.Plot);
+    }
+
+    embed.setColor('#f7924a');
+
     embed.addField('Genre', data.Genre, true);
     embed.setFooter(getAskedBeforeText(askCount));
     embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
@@ -103,7 +106,7 @@ const getEmbed = (data: any, askCount: number) => {
         default:
             embed.addField('Runtime', data.Runtime, true);
             embed.addField('Director', data.Director, true);
-            if(data.Released == 'N/A'){
+            if (data.Released == 'N/A') {
                 embed.addField('Year', data.Year, true);
             } else {
                 embed.addField('Released', data.Released, true);
@@ -114,7 +117,5 @@ const getEmbed = (data: any, askCount: number) => {
     if (data.Awards != 'N/A') {
         embed.addField('Awards', data.Awards, false)
     }
-
-
     return embed;
 }
