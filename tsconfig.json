@@ -1,0 +1,13 @@
+// Example of minimal `tsconfig.json` file
+{
+	"compilerOptions": {
+		"target": "es6",
+        "noImplicitAny": true,
+        "sourceMap": false,
+        "module": "commonjs",
+        "jsx": "react",
+        "esModuleInterop": true,
+        "outDir": "./dist/",
+	},
+    "include": ["src/**/*.ts"]
+}

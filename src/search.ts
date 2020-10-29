@@ -1,61 +1,23 @@
-require('dotenv').config();
-const Discord = require('discord.js');
-const axios = require('axios').default;
-const Redis = require("ioredis");
-const client = new Discord.Client();
+import Redis from 'ioredis';
+import axios from 'axios';
+import { Message, MessageEmbed } from 'discord.js';
+
+import { config } from './config';
+
 const redis = new Redis();
 
-const config = {
-    OMDB_API_KEY: process.env['OMDB_API_KEY'],
-    DISCORD_TOKEN: process.env['DISCORD_TOKEN']
-}
+const movieAPI = axios.create({
+    baseURL: 'http://www.omdbapi.com/',
+    timeout: 4000,
+    params: {
+        apikey: config.OMDB_API_KEY
+    }
+});
 
 const moviePrefix = 'moviebuff/movie/';
 const countPrefix = 'moviebuff/count/';
 
-const movieAPI = axios.create({
-    baseURL: 'http://www.omdbapi.com/',
-    timeout: '4000',
-    params: {
-        apikey: config.OMDB_API_KEY
-    }
-})
-
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-    client.user.setPresence({
-        activity: {
-            name: "@MovieBuff help",
-            type: "WATCHING",
-        }
-    })
-});
-
-client.on('message', async msg => {
-    if (msg.mentions.users.first() != client.user && !msg.content.startsWith('!moviebuff')) return;
-    if (msg.member.id == client.user) return;
-    if (msg.guild.id == '771121281495597117') {
-        msg.reply('ok');
-        return;
-    }
-
-    const command = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
-    if (command.length == 0) {
-        msg.react('👀')
-        msg.reply(`*Yes?* What would you like to ask me about? (Try '<@${client.user.id}> Star Wars')`)
-        return;
-    }
-    msg.react('🎬');
-
-    if (command.toLowerCase() == 'help') {
-        msg.channel.send("I'd love to help you.... Please ask Ed to finish this bit! 😅")
-    }
-    else {
-        await search(msg);
-    }
-});
-
-const search = async msg => {
+export const search = async (msg : Message) => {
     const movie = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ');
     const cacheKey = movie.toLowerCase();
     const cachedData = await redis.get(`${moviePrefix}${cacheKey}`);
@@ -63,11 +25,14 @@ const search = async msg => {
     let movieData;
     if (!cachedData) {
         try {
+
+            const params = {
+                t: movie,
+                plot: 'full'
+            }
+
             const { data } = await movieAPI.get('/', {
-                params: {
-                    t: movie,
-                    plot: 'full'
-                }
+                params
             });
             movieData = data;
             if (movieData.Response == 'false') {
@@ -90,8 +55,6 @@ const search = async msg => {
         return;
     }
 
-    console.log('DATA', movieData);
-
     const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
     const embed = getEmbed(movieData, askedBeforeCount)
 
@@ -101,12 +64,11 @@ const search = async msg => {
     } else {
         embed.description = movieData.Plot;
     }
-
-
+    
     msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
 }
 
-const getAskedBeforeText = count => {
+const getAskedBeforeText = (count: number) => {
     switch (count - 1) {
         case 0:
             return "I've not been asked about this one before.";
@@ -119,8 +81,8 @@ const getAskedBeforeText = count => {
     }
 }
 
-const getEmbed = (data, askCount) => {
-    const embed = new Discord.MessageEmbed({
+const getEmbed = (data: any, askCount: number) => {
+    const embed = new MessageEmbed({
         description: data.Description == 'N/A' ? "There's no description available." : data.Description,
     });
     embed.addField('Genre', data.Genre, true);
@@ -156,7 +118,3 @@ const getEmbed = (data, askCount) => {
 
     return embed;
 }
-
-
-client.login(config.DISCORD_TOKEN);
-
