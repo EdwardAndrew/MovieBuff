@@ -7,11 +7,11 @@ import { config } from './config';
 const redis = new Redis();
 
 const movieAPI = axios.create({
-    baseURL: 'http://www.omdbapi.com/',
+    baseURL: 'https://www.omdbapi.com/',
     timeout: 4000,
     params: {
         apikey: config.OMDB_API_KEY
-    }
+    },
 });
 
 const moviePrefix = 'moviebuff/movie/';
@@ -35,7 +35,7 @@ export const search = async (msg : Message) => {
                 params
             });
             movieData = data;
-            if (movieData.Response == 'false') {
+            if (movieData.Response.toLowerCase() == 'false') {
                 redis.set(`${moviePrefix}${cacheKey}`, null, 'ex', 24 * 60 * 60);
             }
             else {
@@ -64,7 +64,7 @@ export const search = async (msg : Message) => {
     } else {
         embed.description = movieData.Plot;
     }
-    
+
     msg.channel.send(`Here's what I can tell you about *${movieData.Title}.*`, embed)
 }
 
