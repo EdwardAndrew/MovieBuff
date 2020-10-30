@@ -1,4 +1,6 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
+
 import { Message, MessageEmbed } from 'discord.js';
 
 interface APIOptions {
@@ -23,6 +25,7 @@ export abstract class API {
             params: options.defaultParams || {},
             timeout: options.timeout
         });
+        axiosRetry(this.axiosInstance, { retries: 3 })
     }
 
     abstract async search(msg: Message): Promise<APIResponse>;

@@ -7,7 +7,7 @@ export const config = {
         BASE_URL: 'https://api.jikan.moe/v3'
     },
     DISCORD_TOKEN: process.env['DISCORD_TOKEN'],
-    API_TIMEOUT: 4000,
+    API_TIMEOUT: 2500,
     CACHE_NOT_FOUND_TTL: 24 * 60 * 60,
     MAX_DESCRIPTION_LENGTH: 990,
 }
