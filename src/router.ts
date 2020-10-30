@@ -18,4 +18,3 @@ export const router = {
         search(msg);
     }
 }
-
