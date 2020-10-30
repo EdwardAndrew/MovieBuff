@@ -44,7 +44,7 @@ class JikanAPI extends API {
 
         return {
             found: true,
-            embed: this.getEmbed(JSON.parse(cachedData), askedBeforeCount)
+            embed: this.getEmbed(animeData, askedBeforeCount)
         }
     }
 
