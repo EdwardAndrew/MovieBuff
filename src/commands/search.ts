@@ -8,8 +8,7 @@ import { API, APIResponse } from '../apis/baseAPI';
 export const search = async (msg: Message) => {
     const foundHints = getHints(msg.content);
 
-    // const api: API = foundHints.length > 0 ? getAPI(foundHints[0]) : omdb;
-    const api : API = omdb;
+    const api: API = foundHints.length > 0 ? getAPI(foundHints[0]) : omdb;
     try {
         const result: APIResponse = await api.search(msg)
 
