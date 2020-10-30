@@ -10,7 +10,7 @@ const countPrefix = 'moviebuff/count/';
 class OMDBApi extends API {
     async search(msg: Message) {
         const parsedMessage = removeHints(msg.content);
-        const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ');
+        const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = movie.toLowerCase();
         const cachedData = await redis.get(`${moviePrefix}${cacheKey}`);
 
