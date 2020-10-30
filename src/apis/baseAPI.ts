@@ -29,5 +29,4 @@ export abstract class API {
     }
 
     abstract async search(msg: Message): Promise<APIResponse>;
-
 }

@@ -2,10 +2,7 @@ import { API, APIResponse } from "./baseAPI";
 import { config } from "../config";
 import { Message, MessageEmbed } from "discord.js";
 import { getAskedBeforeText, removeHints } from "../utils";
-import { redis } from "./cache";
-
-const cachePrefix = 'moviebuff/anime-jikan/';
-const countPrefix = 'moviebuff/count/';
+import { redis, prefixes } from "./cache";
 
 class JikanAPI extends API {
     async search(msg: Message): Promise<APIResponse> {
@@ -13,7 +10,7 @@ class JikanAPI extends API {
         const parsedMessage = removeHints(msg.content);
         const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = search.toLowerCase();
-        const cachedData = await redis.get(`${cachePrefix}${cacheKey}`);
+        const cachedData = await redis.get(`${prefixes.anime}${cacheKey}`);
 
         let animeData;
         if (!cachedData) {
@@ -25,7 +22,7 @@ class JikanAPI extends API {
                     params
                 });
                 if (data?.results.length || 0 > 0) {
-                    redis.set(`${cachePrefix}${cacheKey}`, JSON.stringify(data.results[0]));
+                    redis.set(`${prefixes.anime}${cacheKey}`, JSON.stringify(data.results[0]));
                     animeData = data.results[0];
                 } else {
                     return {
@@ -40,7 +37,7 @@ class JikanAPI extends API {
             animeData = JSON.parse(cachedData);
         }
 
-        const askedBeforeCount = await redis.incr(`${countPrefix}${cacheKey}`);
+        const askedBeforeCount = await redis.incr(`${prefixes.count}${cacheKey}`);
 
         return {
             found: true,

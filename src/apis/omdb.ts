@@ -2,17 +2,14 @@ import { Message, MessageEmbed } from "discord.js";
 import { API, APIResponse } from "./baseAPI";
 import { config } from '../config';
 import { removeHints, getAskedBeforeText } from "../utils";
-import { redis } from './cache';
-
-const moviePrefix = 'moviebuff/movie-omdb/';
-const countPrefix = 'moviebuff/count/';
+import { redis, prefixes } from './cache';
 
 class OMDBApi extends API {
     async search(msg: Message) {
         const parsedMessage = removeHints(msg.content);
         const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = movie.toLowerCase();
-        const cachedData = await redis.get(`${moviePrefix}${cacheKey}`);
+        const cachedData = await redis.get(`${prefixes.movie}${cacheKey}`);
 
         const result: APIResponse = {
             found: false
@@ -32,10 +29,10 @@ class OMDBApi extends API {
                 });
                 movieData = data;
                 if (movieData.Response.toLowerCase() == 'false') {
-                    redis.set(`${moviePrefix}${cacheKey}`, null, 'ex', 24 * 60 * 60);
+                    redis.set(`${prefixes.movie}${cacheKey}`, null, 'ex', 24 * 60 * 60);
                 }
                 else {
-                    redis.set(`${moviePrefix}${cacheKey}`, JSON.stringify(movieData));
+                    redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData));
                 }
             } catch (err) {
                 console.error(err);
@@ -45,7 +42,7 @@ class OMDBApi extends API {
             movieData = JSON.parse(cachedData);
         }
 
-        const askedBeforeCount = await redis.incr(`${countPrefix}${movieData.Title}`);
+        const askedBeforeCount = await redis.incr(`${prefixes.count}${movieData.Title}`);
         result.embed = this.getEmbed(movieData, askedBeforeCount);
         result.found = true;
 
