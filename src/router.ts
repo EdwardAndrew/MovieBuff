@@ -1,13 +1,14 @@
 import { Message } from "discord.js";
 import { twitch } from "./apis/twitchID";
 import { search } from "./commands/search";
+import { config } from "./config";
 
 export const router = {
     route: (msg: Message) => {
         const command = msg.content.trim().split(' ').slice(1, msg.content.length).join(' ').toLowerCase();
         if (command.length == 0) {
             msg.react('👀')
-            msg.reply(`*Yes?* What would you like to ask me about? (Try '!mb Star Wars')`)
+            msg.reply(`*Yes?* What would you like to ask me about? (Try '${config.COMMAND_PREFIX} Star Wars')`)
             return;
         }
 

@@ -2,42 +2,48 @@ import { Message, MessageEmbed } from "discord.js";
 import { API, APIResponse } from "./baseAPI";
 import { config } from '../config';
 import { removeHints, getAskedBeforeText, getDefaultEmbed } from "../utils";
-import { redis, prefixes } from './cache';
+import { redis, cachePrefixes } from './cache';
+import { cache_hits, cache_misses } from "../metrics";
 
 class OMDBApi extends API {
     async search(msg: Message) {
         const parsedMessage = removeHints(msg.content);
         const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = movie.toLowerCase();
-        const cachedData = await redis.get(`${prefixes.movie}${cacheKey}`);
+        const cachedData = await redis.get(`${cachePrefixes.movie}${cacheKey}`);
 
         let movieData;
         if (!cachedData) {
             try {
+                this.cacheMissIncrement();
 
                 const params = {
                     t: movie,
                     plot: 'full'
                 }
-
                 const { data } = await this.axiosInstance.get('/', {
                     params
                 });
                 movieData = data;
                 if (movieData.Response.toLowerCase() == 'false') {
-                    redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData), 'ex', config.CACHE_NOT_FOUND_TTL);
-                    return ({ found: false })
+                    redis.set(`${cachePrefixes.movie}${cacheKey}`, JSON.stringify(movieData), 'ex', config.CACHE_NOT_FOUND_TTL);
+                } else {
+                    redis.set(`${cachePrefixes.movie}${cacheKey}`, JSON.stringify(movieData));        
                 }
-                redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData));        
             } catch (err) {
                 console.error(err);
                 throw err;
             }
         } else {
             movieData = JSON.parse(cachedData);
+            this.cacheHitIncrement();
         }
 
-        const askedBeforeCount = await redis.incr(`${prefixes.count}${movieData.Title}`);
+        if(movieData.Response.toLowerCase() == 'false'){
+            return ({ found: false });
+        }
+
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${movieData.Title}`);
 
         return ({
             embed: this.getEmbed(movieData, askedBeforeCount),
@@ -92,6 +98,7 @@ class OMDBApi extends API {
 
 export const omdb = new OMDBApi({
     baseURL: config.OMDB.BASE_URL,
+    name: 'omdb',
     defaultParams: {
         apikey: config.OMDB.API_KEY
     },

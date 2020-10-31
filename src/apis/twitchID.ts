@@ -46,7 +46,7 @@ class TwitchIDAPI {
         if(this.tokenExpires <= Date.now()){
             await this.auth();
         }
-        return this.accessToken
+        return this.accessToken;
     }
 }
 

@@ -2,7 +2,7 @@ import { Message, MessageEmbed } from "discord.js";
 import { config } from "../config";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
 import { API, APIResponse } from "./baseAPI";
-import { prefixes, redis } from "./cache";
+import { cachePrefixes, redis } from "./cache";
 import { twitch } from "./twitchID";
 
 class IGDBAPI extends API {
@@ -18,10 +18,11 @@ class IGDBAPI extends API {
         const parsedMessage = removeHints(msg.content);
         const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = search.toLowerCase();
-        const cachedData = await redis.get(`${prefixes.game}${cacheKey}`);
+        const cachedData = await redis.get(`${cachePrefixes.game}${cacheKey}`);
         let gameData;
 
         if(!cachedData){
+            this.cacheMissIncrement();
             try{
                 const token = await twitch.getToken();
                 const { data } = await this.axiosInstance.post('/games',this.getSearchQuery(search), {
@@ -30,24 +31,25 @@ class IGDBAPI extends API {
                     }
                 });
                 if(data && data.length <= 0){ 
-                    redis.set(`${prefixes.game}${cacheKey}`, JSON.stringify({ response: false}), 'ex', config.CACHE_NOT_FOUND_TTL);
+                    redis.set(`${cachePrefixes.game}${cacheKey}`, JSON.stringify({ response: false}), 'ex', config.CACHE_NOT_FOUND_TTL);
                     return ({found: false});
                 }
                 gameData = data[0];
                 gameData.response = true;
-                redis.set(`${prefixes.game}${cacheKey}`, JSON.stringify(gameData));
+                redis.set(`${cachePrefixes.game}${cacheKey}`, JSON.stringify(gameData));
             } catch(err){
                 console.error(err);
                 throw err;
             }
         } else {
+            this.cacheHitIncrement();
             gameData = JSON.parse(cachedData);
         }
         if(!gameData.response){
             return ({ found: false });
         }
 
-        const askedBeforeCount = await redis.incr(`${prefixes.count}${cacheKey}`)
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${cacheKey}`)
 
         return ({
             found: true,
@@ -96,6 +98,7 @@ class IGDBAPI extends API {
 export const igdb = new IGDBAPI({
     baseURL: config.IGDB.BASE_URL,
     timeout: config.API_TIMEOUT,
+    name: 'igdb',
     defaultHeaders: {
         'Client-ID': config.Twitch.CLIENT_ID,
         Accept: 'application/json'

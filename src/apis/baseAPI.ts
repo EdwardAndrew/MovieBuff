@@ -3,10 +3,12 @@ import axiosRetry from 'axios-retry';
 
 import { Message, MessageEmbed } from 'discord.js';
 import { config } from '../config';
+import { cache_hits, cache_misses } from '../metrics';
 
 interface APIOptions {
     baseURL: string;
     timeout: number;
+    name: string;
     defaultParams?: {
         [key: string]: string;
     },
@@ -22,6 +24,7 @@ export type APIResponse = {
 
 export abstract class API {
     protected axiosInstance;
+    protected name;
 
     constructor(options: APIOptions) {
         this.axiosInstance = axios.create({
@@ -30,7 +33,8 @@ export abstract class API {
             headers: options.defaultHeaders || {},
             timeout: options.timeout,
         });
-        axiosRetry(this.axiosInstance, { retries: 3 })
+        axiosRetry(this.axiosInstance, { retries: 3 });
+        this.name = options.name;
     }
 
     abstract async search(msg: Message): Promise<APIResponse>;
@@ -50,5 +54,13 @@ export abstract class API {
 
     private truncateString(string: string, length: number): string {
         return string.length > length ? string.slice(0, length-3).trim().concat('...') : string;
+    }
+
+    protected cacheHitIncrement() {
+        cache_hits.inc({ api: this.name})
+    }
+
+    protected cacheMissIncrement() {
+        cache_misses.inc({ api: this.name })
     }
 }

@@ -2,7 +2,7 @@ import { API, APIResponse } from "./baseAPI";
 import { config } from "../config";
 import { Message, MessageEmbed } from "discord.js";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
-import { redis, prefixes } from "./cache";
+import { redis, cachePrefixes } from "./cache";
 
 class JikanAPI extends API {
     async search(msg: Message): Promise<APIResponse> {
@@ -10,11 +10,12 @@ class JikanAPI extends API {
         const parsedMessage = removeHints(msg.content);
         const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = search.toLowerCase();
-        const cachedData = await redis.get(`${prefixes.anime}${cacheKey}`);
+        const cachedData = await redis.get(`${cachePrefixes.anime}${cacheKey}`);
 
         let animeData;
         if (!cachedData) {
             try {
+                this.cacheMissIncrement();
                 const params = {
                     q: search
                 }
@@ -22,22 +23,26 @@ class JikanAPI extends API {
                     params
                 });
                 if (data?.results.length || 0 > 0) {
-                    redis.set(`${prefixes.anime}${cacheKey}`, JSON.stringify(data.results[0]));
                     animeData = data.results[0];
+                    animeData.response = true;
+                    redis.set(`${cachePrefixes.anime}${cacheKey}`, JSON.stringify(animeData));
                 } else {
-                    return {
-                        found: false
-                    }
+                    redis.set(`${cachePrefixes.anime}${cacheKey}`, JSON.stringify({response: false}), 'ex', config.CACHE_NOT_FOUND_TTL);
                 }
             } catch (err) {
                 console.error(err);
                 throw err;
             }
         } else {
+            this.cacheHitIncrement();
             animeData = JSON.parse(cachedData);
         }
 
-        const askedBeforeCount = await redis.incr(`${prefixes.count}${cacheKey}`);
+        if(!animeData.response){
+            return ({ found: false })
+        }
+
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${cacheKey}`);
 
         return {
             found: true,
@@ -63,5 +68,6 @@ class JikanAPI extends API {
 
 export const jikan = new JikanAPI({
     baseURL: config.Jikan.BASE_URL,
+    name: 'jikan',
     timeout: config.API_TIMEOUT
 });

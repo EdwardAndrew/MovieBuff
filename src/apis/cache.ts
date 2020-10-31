@@ -1,9 +1,12 @@
 import Redis from 'ioredis';
+import { config } from '../config';
 export const redis = new Redis();
 
-export const prefixes = {
-    count: 'moviebuff/count/',
-    anime: 'moviebuff/anime-jikan/',
-    movie: 'moviebuff/movie-omdb/',
-    game:  'moviebuff/game-igdb/',
+const globalPrefix = config.CACHE_GLOBAL_PREFIX;
+
+export const cachePrefixes = {
+    count: `${globalPrefix}count/`,
+    anime: `${globalPrefix}anime-jikan/`,
+    movie: `${globalPrefix}movie-omdb/`,
+    game:  `${globalPrefix}game-igdb/`,
 }
