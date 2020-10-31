@@ -21,7 +21,7 @@ client.on('ready', () => {
 });
 
 client.on('message', msg => {
-    if (msg.mentions.users.first() != client.user && !msg.content.startsWith('!mb') && !msg.content.startsWith('!moviebuff')) return;
+    if(!msg.content.startsWith(`${config.COMMAND_PREFIX} `)) return;
     if (msg.member.id == client.user.id) return;
 
     router.route(msg);

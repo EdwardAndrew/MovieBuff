@@ -18,4 +18,5 @@ export const config = {
     API_TIMEOUT: 2500,
     CACHE_NOT_FOUND_TTL: 24 * 60 * 60,
     MAX_DESCRIPTION_LENGTH: 990,
+    COMMAND_PREFIX: '!mb'
 }
