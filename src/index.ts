@@ -8,6 +8,7 @@ import { router } from './router';
 import { serverGauge } from './metrics';
 
 const client = new Discord.Client();
+const botCommandRegEx = new RegExp(`^${config.COMMAND_PREFIX} .*$`)
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -21,7 +22,7 @@ client.on('ready', () => {
 });
 
 client.on('message', msg => {
-    if(!msg.content.startsWith(`${config.COMMAND_PREFIX} `)) return;
+    if(!botCommandRegEx.test(msg.content)) return;
     if (msg.member.id == client.user.id) return;
 
     router.route(msg);
