@@ -61,9 +61,9 @@ class IGDBAPI extends API {
         embed.title = data.name ?? '';
         embed.description = data.summary ?? '';
 
-        const steamURL = (data.websites ?? []).find((website: any) => website.url.indexOf('steampowered') > -1).url;
-        if(steamURL){
-            embed.url = steamURL;
+        const steam = (data.websites ?? []).find((website: any) => website.url.indexOf('steampowered') > -1);
+        if(steam){
+            embed.url = steam.url;
         }
 
         if(data.first_release_date){
