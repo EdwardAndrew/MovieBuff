@@ -1,7 +1,7 @@
 import { API, APIResponse } from "./baseAPI";
 import { config } from "../config";
 import { Message, MessageEmbed } from "discord.js";
-import { getAskedBeforeText, removeHints } from "../utils";
+import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
 import { redis, prefixes } from "./cache";
 
 class JikanAPI extends API {
@@ -46,18 +46,18 @@ class JikanAPI extends API {
     }
 
     private getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
-        const embed = new MessageEmbed({
-            title: data.title,
-            description: data.synopsis,
-            url: data.url,
-        });
+        const embed = getDefaultEmbed();
+        embed.title = data.title;
+        embed.description = data.synopsis;
+        embed.url = data.url
+
         embed.addField('Episodes', data.episodes, true);
         embed.addField('Score', data.score, true);
         embed.addField('Rated', data.rated, true);
-
-        embed.setFooter(getAskedBeforeText(askedBeforeCount))
+        embed.setColor('#5fc1f5');
+        embed.setFooter(getAskedBeforeText(askedBeforeCount));
         embed.setImage(data.image_url);
-        return embed;
+        return this.validateMessageEmbed(embed);
     }
 }
 

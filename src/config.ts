@@ -4,7 +4,15 @@ export const config = {
         BASE_URL: 'https://www.omdbapi.com/',
     },
     Jikan: {
-        BASE_URL: 'https://api.jikan.moe/v3'
+        BASE_URL: 'https://api.jikan.moe/v3/'
+    },
+    Twitch: {
+        BASE_URL: "https://id.twitch.tv/",
+        CLIENT_ID: process.env['TWITCH_CLIENT_ID'],
+        CLIENT_SECRET: process.env['TWITCH_CLIENT_SECRET']   
+    },
+    IGDB: {
+        BASE_URL: "https://api.igdb.com/v4",
     },
     DISCORD_TOKEN: process.env['DISCORD_TOKEN'],
     API_TIMEOUT: 2500,

@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import Discord from 'discord.js';
+import './metrics';
 
 import { config } from './config';
 import { router } from './router';
+import { serverGauge } from './metrics';
 
 const client = new Discord.Client();
 
@@ -14,7 +16,8 @@ client.on('ready', () => {
             name: "Type !mb help",
             type: "WATCHING",
         }
-    })
+    });
+    serverGauge.set(client.guilds.cache.size);
 });
 
 client.on('message', msg => {
@@ -24,5 +27,20 @@ client.on('message', msg => {
     router.route(msg);
 });
 
-client.login(config.DISCORD_TOKEN);
+client.on('guildCreate', () => {
+    serverGauge.set(client.guilds.cache.size);
+});
 
+client.on('guildDelete', () => {
+    serverGauge.set(client.guilds.cache.size);
+});
+
+client.on('error', error => {
+    console.error(error);
+});
+
+client.on('warn', warning => {
+    console.warn(warning);
+})
+
+client.login(config.DISCORD_TOKEN);

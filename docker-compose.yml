@@ -4,3 +4,11 @@ services:
     image: "redis:alpine"
     ports:
       - "6379:6379"
+  grafana:
+    image: "grafana/grafana"
+    ports:
+      - "8080:3000"
+  prometheus:
+    image: "prom/prometheus"
+    ports:
+      - "8081:9090"

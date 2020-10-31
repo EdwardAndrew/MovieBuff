@@ -1,4 +1,5 @@
 import { Message } from "discord.js";
+import { twitch } from "./apis/twitchID";
 import { search } from "./commands/search";
 
 export const router = {

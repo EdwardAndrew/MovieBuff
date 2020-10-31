@@ -1,7 +1,10 @@
+import { MessageEmbed } from "discord.js";
+
 export enum Hint {
     anime,
     movie,
-    tv
+    tv,
+    game
 }
 
 interface HintMap {
@@ -15,7 +18,10 @@ const hintMap: HintMap = {
     film: Hint.movie,
     tv: Hint.tv,
     show: Hint.tv,
-    television: Hint.tv
+    television: Hint.tv,
+    game: Hint.game,
+    vg: Hint.game,
+    videogame: Hint.game
 }
 
 export const removeHints = (command: string): string => {
@@ -50,4 +56,10 @@ export const getAskedBeforeText = (count: number) => {
         default:
             return `I've been asked about this ${count - 1} times...`
     }
+}
+
+export const getDefaultEmbed = (): MessageEmbed => {
+    const embed = new MessageEmbed();
+    embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
+    return embed;
 }

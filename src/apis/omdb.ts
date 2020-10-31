@@ -1,7 +1,7 @@
 import { Message, MessageEmbed } from "discord.js";
 import { API, APIResponse } from "./baseAPI";
 import { config } from '../config';
-import { removeHints, getAskedBeforeText } from "../utils";
+import { removeHints, getAskedBeforeText, getDefaultEmbed } from "../utils";
 import { redis, prefixes } from './cache';
 
 class OMDBApi extends API {
@@ -10,10 +10,6 @@ class OMDBApi extends API {
         const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
         const cacheKey = movie.toLowerCase();
         const cachedData = await redis.get(`${prefixes.movie}${cacheKey}`);
-
-        const result: APIResponse = {
-            found: false
-        }
 
         let movieData;
         if (!cachedData) {
@@ -29,11 +25,10 @@ class OMDBApi extends API {
                 });
                 movieData = data;
                 if (movieData.Response.toLowerCase() == 'false') {
-                    redis.set(`${prefixes.movie}${cacheKey}`, null, 'ex', 24 * 60 * 60);
+                    redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData), 'ex', config.CACHE_NOT_FOUND_TTL);
+                    return ({ found: false })
                 }
-                else {
-                    redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData));
-                }
+                redis.set(`${prefixes.movie}${cacheKey}`, JSON.stringify(movieData));        
             } catch (err) {
                 console.error(err);
                 throw err;
@@ -43,31 +38,23 @@ class OMDBApi extends API {
         }
 
         const askedBeforeCount = await redis.incr(`${prefixes.count}${movieData.Title}`);
-        result.embed = this.getEmbed(movieData, askedBeforeCount);
-        result.found = true;
 
-        return result;
+        return ({
+            embed: this.getEmbed(movieData, askedBeforeCount),
+            found: true
+        });
     }
 
 
     private getEmbed(data: any, askCount: number): MessageEmbed {
-        const embed = new MessageEmbed();
-        if (data.Plot.length > config.MAX_DESCRIPTION_LENGTH) {
-            const text = data.Plot.slice(0, config.MAX_DESCRIPTION_LENGTH - 3).trim().concat('...');
-            embed.setDescription(text);
-        } else if (data.Plot == 'N/A') {
-            embed.setDescription("No description is available.")
-        } else {
-            embed.setDescription(data.Plot);
-        }
+        const embed = getDefaultEmbed();
 
+        embed.title = data.Title;
+        embed.setDescription(data.Plot);
         embed.setColor('#f7924a');
-
         embed.addField('Genre', data.Genre, true);
         embed.setFooter(getAskedBeforeText(askCount));
-        embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
         if (data.Poster != 'N/A') embed.setImage(data.Poster);
-        embed.title = data.Title;
         embed.url = `https://www.imdb.com/title/${data.imdbID}/`;
         embed.addField('Actors', data.Actors, true);
 
@@ -92,7 +79,14 @@ class OMDBApi extends API {
         if (data.Awards != 'N/A') {
             embed.addField('Awards', data.Awards, false)
         }
-        return embed;
+        // embed.provider = {
+        //     name: 'test1234',
+        //     url: 'http://localhost'
+        // },
+        // embed.type = 'rich';
+        // embed.timestamp = Date.now();
+        // embed.setThumbnail(data.Poster);
+        return this.validateMessageEmbed(embed);
     }
 }
 
