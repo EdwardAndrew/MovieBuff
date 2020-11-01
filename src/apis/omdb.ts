@@ -7,7 +7,12 @@ import { redis, cachePrefixes } from './cache';
 class OMDBApi extends API {
     async search(msg: Message) {
         const parsedMessage = removeHints(msg.content);
-        const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
+        const movie = parsedMessage
+        .split(' ')
+        .slice(1, msg.content.length)
+        .join(' ')
+        .trim()
+        .toLowerCase();
         const cacheKey = await redis.get(`${cachePrefixes.movieSearch}${movie}`);
 
         let cachedData = null;

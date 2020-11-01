@@ -8,37 +8,42 @@ class JikanAPI extends API {
     async search(msg: Message): Promise<APIResponse> {
 
         const parsedMessage = removeHints(msg.content);
-        const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
-        const cacheKey = await redis.get(`${cachePrefixes.animeSearch}${search}`);
+        const anime = parsedMessage
+        .split(' ')
+        .slice(1, msg.content.length)
+        .join(' ')
+        .trim()
+        .toLowerCase();
+        const cacheKey = await redis.get(`${cachePrefixes.animeSearch}${anime}`);
         let cachedData = null;
         if (cacheKey) {
             cachedData = await redis.get(`${cachePrefixes.anime}${cacheKey}`);
         }
-
 
         let animeData;
         if (!cachedData) {
             try {
                 this.cacheMissIncrement();
                 const params = {
-                    q: search
+                    q: anime
                 }
                 const { data } = await this.axiosInstance.get('search/anime', {
                     params
                 });
-                if (data?.results.length || 0 > 0 && data.title) {
+                if ((data?.results || []).length > 0) {
 
                     animeData = data.results[0];
                     animeData.response = true;
+                    const key = animeData.title;
                     redis.multi()
-                        .set(`${cachePrefixes.anime}${data.title}`, JSON.stringify(animeData))
-                        .set(`${cachePrefixes.animeSearch}${search}`, data.title)
+                        .set(`${cachePrefixes.anime}${key}`, JSON.stringify(animeData))
+                        .set(`${cachePrefixes.animeSearch}${anime}`, key)
                         .exec()
 
                 } else {
                     redis.multi()
                         .set(`${cachePrefixes.anime}`, JSON.stringify({ response: false }), 'ex', config.CACHE_NOT_FOUND_TTL)
-                        .set(`${cachePrefixes.animeSearch}${search}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .set(`${cachePrefixes.animeSearch}${anime}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
                         .exec();
                 }
             } catch (err) {

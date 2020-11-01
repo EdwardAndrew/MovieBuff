@@ -17,13 +17,17 @@ class IGDBAPI extends API {
 
     async search(msg: Message): Promise<APIResponse> {
         const parsedMessage = removeHints(msg.content);
-        const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
-        const searchKey = search.toLowerCase();
-        const cacheKey = await redis.get(`${cachePrefixes.gameSearch}${searchKey}`);
+        const game = parsedMessage
+        .split(' ')
+        .slice(1, msg.content.length)
+        .join(' ')
+        .trim()
+        .toLowerCase();
+        const cacheKey = await redis.get(`${cachePrefixes.gameSearch}${game}`);
 
         let cachedData = null;
         if (cacheKey) {
-            await redis.get(`${cachePrefixes.game}${cacheKey}`)
+            cachedData = await redis.get(`${cachePrefixes.game}${cacheKey}`)
         }
 
         let gameData;
@@ -31,7 +35,7 @@ class IGDBAPI extends API {
             this.cacheMissIncrement();
             try {
                 const token = await twitch.getToken();
-                const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(search), {
+                const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(game), {
                     headers: {
                         authorization: `Bearer ${token}`
                     }
@@ -39,7 +43,7 @@ class IGDBAPI extends API {
                 if (data && data.length <= 0) {
                     redis.multi()
                         .set(`${cachePrefixes.game}`, JSON.stringify({ response: false }), 'ex', config.CACHE_NOT_FOUND_TTL)
-                        .set(`${cachePrefixes.gameSearch}${searchKey}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .set(`${cachePrefixes.gameSearch}${game}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
                         .exec();
                     return ({ found: false });
                 }
@@ -47,8 +51,8 @@ class IGDBAPI extends API {
                 gameData.response = true;
 
                 redis.multi()
-                    .set(`${cachePrefixes.gameSearch}${searchKey}`, gameData.name)
                     .set(`${cachePrefixes.game}${gameData.name}`, JSON.stringify(gameData))
+                    .set(`${cachePrefixes.gameSearch}${game}`, gameData.name)
                     .exec();
             } catch (err) {
                 console.error(err);
