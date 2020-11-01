@@ -35,7 +35,7 @@ export interface DownstreamResponse {
     [key: string]: any;
 }
 
-export abstract class API {
+export abstract class API<T extends DownstreamResponse> {
     readonly axiosInstance;
     readonly name;
     readonly searchCachePrefix: string;
@@ -56,9 +56,8 @@ export abstract class API {
         this.countCachePrefix = options.cachePrefixes.count
     }
 
-
     protected abstract getEmbed(data: any, askedBeforeCount: number): MessageEmbed;
-    protected abstract async apiSearch(searchTerm: string): Promise<DownstreamResponse>;
+    protected abstract async apiSearch(searchTerm: string): Promise<T>;
 
     async search(msg: Message): Promise<APIResponse> {
         const search = removeHints(msg.content)
@@ -80,7 +79,7 @@ export abstract class API {
         })
     }
 
-    private async getSerializedData(search: string): Promise<DownstreamResponse> {
+    private async getSerializedData(search: string): Promise<T> {
         const cacheKey = await redis.get(`${this.searchCachePrefix}${search}`);
         const cachedData = cacheKey ? await redis.get(`${this.dataCachePrefix}${cacheKey}`) : null;
         if (cachedData) {

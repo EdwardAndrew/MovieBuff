@@ -2,10 +2,13 @@ import { API, DownstreamResponse } from "./baseAPI";
 import { config } from "../config";
 import { MessageEmbed } from "discord.js";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
-import {  cachePrefixes } from "./cache";
+import { cachePrefixes } from "./cache";
 
-class JikanAPI extends API {
-    async apiSearch(searchTerm: string): Promise<DownstreamResponse> {
+interface JikanResponse extends DownstreamResponse{
+}
+
+class JikanAPI extends API<JikanResponse> {
+    async apiSearch(searchTerm: string): Promise<JikanResponse> {
         const params = {
             q: searchTerm
         }
@@ -27,7 +30,7 @@ class JikanAPI extends API {
         })
     }
 
-    protected getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
+    protected getEmbed(data: JikanResponse, askedBeforeCount: number): MessageEmbed {
         const embed = getDefaultEmbed();
         embed.title = data.title;
         embed.description = data.synopsis;

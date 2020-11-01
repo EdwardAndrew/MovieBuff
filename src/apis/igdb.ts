@@ -5,7 +5,10 @@ import { API, DownstreamResponse } from "./baseAPI";
 import { cachePrefixes } from "./cache";
 import { twitch } from "./twitchID";
 
-class IGDBAPI extends API {
+interface IGDBResponse extends DownstreamResponse {
+}
+
+class IGDBAPI extends API<IGDBResponse> {
     private getSearchQuery(title: string): string {
         return `search "${title.replace('"', "\\\"")}";
         fields name,cover.url, summary, game_engines.name, genres.name, platforms.name, first_release_date, rating, similar_games.name, websites.url;
@@ -13,7 +16,7 @@ class IGDBAPI extends API {
         limit 1;`
     }
 
-    async apiSearch(searchTerm: string): Promise<DownstreamResponse> {
+    async apiSearch(searchTerm: string): Promise<IGDBResponse> {
         const token = await twitch.getToken();
         const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(searchTerm), {
             headers: {
@@ -34,7 +37,7 @@ class IGDBAPI extends API {
         });
     }
 
-    protected getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
+    protected getEmbed(data: IGDBResponse, askedBeforeCount: number): MessageEmbed {
 
         const embed = getDefaultEmbed();
         embed.title = data.name ?? '';

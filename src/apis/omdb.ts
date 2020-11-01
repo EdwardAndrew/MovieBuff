@@ -4,8 +4,11 @@ import { config } from '../config';
 import { getAskedBeforeText, getDefaultEmbed } from "../utils";
 import { cachePrefixes } from './cache';
 
-class OMDBApi extends API {
-    async apiSearch(searchTerm: string): Promise<DownstreamResponse> {
+interface OMDBResponse extends DownstreamResponse {
+}
+
+class OMDBApi extends API<OMDBResponse> {
+    async apiSearch(searchTerm: string): Promise<OMDBResponse> {
         const params = {
             t: searchTerm,
             plot: 'full'
@@ -26,7 +29,7 @@ class OMDBApi extends API {
         })
     }
 
-    protected getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
+    protected getEmbed(data: OMDBResponse, askedBeforeCount: number): MessageEmbed {
         const embed = getDefaultEmbed();
 
         embed.title = data.Title;
