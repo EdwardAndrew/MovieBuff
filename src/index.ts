@@ -18,6 +18,7 @@ client.on('ready', () => {
             type: "WATCHING",
         }
     });
+    config.CLIENT_ID = client.user.id;
     serverGauge.set(client.guilds.cache.size);
 });
 

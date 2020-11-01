@@ -21,5 +21,6 @@ export const config = {
     MAX_DESCRIPTION_LENGTH: 990,
     COMMAND_PREFIX: '!mb',
     VERSION: '1.0.1',
-    BOT_NAME: 'MovieBuff'
+    BOT_NAME: 'MovieBuff',
+    CLIENT_ID: ''
 }
