@@ -3,14 +3,14 @@ import { Message } from 'discord.js';
 import { omdb } from '../apis/omdb';
 import { jikan } from '../apis/jikan';
 import { blankChar, getHints, Hint } from '../utils';
-import { API, APIResponse } from '../apis/baseAPI';
+import { API, APIResponse, DownstreamResponse } from '../apis/baseAPI';
 import { igdb } from '../apis/igdb';
 import { search_errored, search_found, search_notFound } from '../metrics';
 
 export const search = async (msg: Message) => {
     const foundHints = getHints(msg.content);
 
-    const api: API = foundHints.length > 0 ? getAPI(foundHints[0]) : omdb;
+    const api: API<DownstreamResponse> = foundHints.length > 0 ? getAPI(foundHints[0]) : omdb;
     try {
         const result: APIResponse = await api.search(msg)
 
@@ -31,7 +31,7 @@ export const search = async (msg: Message) => {
 
 }
 
-const getAPI = (hint: Hint): API => {
+const getAPI = (hint: Hint): API<DownstreamResponse> => {
     switch (hint) {
         case Hint.anime:
             return jikan;
