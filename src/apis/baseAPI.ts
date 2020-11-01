@@ -4,6 +4,8 @@ import axiosRetry from 'axios-retry';
 import { Message, MessageEmbed } from 'discord.js';
 import { config } from '../config';
 import { cache_hits, cache_misses } from '../metrics';
+import { removeHints } from '../utils';
+import { redis } from './cache';
 
 interface APIOptions {
     baseURL: string;
@@ -14,6 +16,11 @@ interface APIOptions {
     },
     defaultHeaders?: {
         [key: string]: string;
+    },
+    cachePrefixes: {
+        data: string,
+        count: string,
+        search: string
     }
 }
 
@@ -22,9 +29,18 @@ export type APIResponse = {
     found: boolean;
 }
 
+export interface DownstreamResponse {
+    response: boolean;
+    cacheKey: string;
+    [key: string]: any;
+}
+
 export abstract class API {
-    protected axiosInstance;
-    protected name;
+    readonly axiosInstance;
+    readonly name;
+    readonly searchCachePrefix: string;
+    readonly dataCachePrefix: string;
+    readonly countCachePrefix: string;
 
     constructor(options: APIOptions) {
         this.axiosInstance = axios.create({
@@ -35,11 +51,60 @@ export abstract class API {
         });
         axiosRetry(this.axiosInstance, { retries: 3 });
         this.name = options.name;
+        this.searchCachePrefix = options.cachePrefixes.search;
+        this.dataCachePrefix = options.cachePrefixes.data;
+        this.countCachePrefix = options.cachePrefixes.count
     }
 
-    abstract async search(msg: Message): Promise<APIResponse>;
 
-    validateMessageEmbed(embed: MessageEmbed): MessageEmbed {
+    protected abstract getEmbed(data: any, askedBeforeCount: number): MessageEmbed;
+    protected abstract async apiSearch(searchTerm: string): Promise<DownstreamResponse>;
+
+    async search(msg: Message): Promise<APIResponse> {
+        const search = removeHints(msg.content)
+            .split(' ')
+            .slice(1, msg.content.length)
+            .join(' ')
+            .trim()
+            .toLowerCase();
+
+        const serialisedData = await this.getSerializedData(search);
+        if (!serialisedData.response) {
+            return ({ found: false })
+        }
+        const askedBeforeCount = await redis.incr(`${this.countCachePrefix}${serialisedData.cacheKey}`);
+
+        return ({
+            embed: this.validateMessageEmbed(this.getEmbed(serialisedData, askedBeforeCount)),
+            found: true
+        })
+    }
+
+    private async getSerializedData(search: string): Promise<DownstreamResponse> {
+        const cacheKey = await redis.get(`${this.searchCachePrefix}${search}`);
+        const cachedData = cacheKey ? await redis.get(`${this.dataCachePrefix}${cacheKey}`) : null;
+        if (cachedData) {
+            this.cacheHitIncrement();
+            return JSON.parse(cachedData)
+        };
+        this.cacheMissIncrement();
+
+        const fetchedData = await this.apiSearch(search);
+        if (!fetchedData.response) {
+            redis.multi()
+                .set(`${this.dataCachePrefix}`, JSON.stringify(fetchedData), 'ex', config.CACHE_NOT_FOUND_TTL)
+                .set(`${this.searchCachePrefix}${search}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                .exec()
+        } else {
+            redis.multi()
+                .set(`${this.dataCachePrefix}${fetchedData.cacheKey}`, JSON.stringify(fetchedData))
+                .set(`${this.searchCachePrefix}${search}`, fetchedData.cacheKey)
+                .exec();
+        }
+        return fetchedData;
+    }
+
+    private validateMessageEmbed(embed: MessageEmbed): MessageEmbed {
         embed.title = this.truncateString(embed.title || '', 256);
         embed.description = this.truncateString(embed.description || '', config.MAX_DESCRIPTION_LENGTH);
         embed.fields = embed.fields.map(field => ({
@@ -56,11 +121,11 @@ export abstract class API {
         return string.length > length ? string.slice(0, length - 3).trim().concat('...') : string;
     }
 
-    protected cacheHitIncrement() {
+    private cacheHitIncrement() {
         cache_hits.inc({ api: this.name })
     }
 
-    protected cacheMissIncrement() {
+    private cacheMissIncrement() {
         cache_misses.inc({ api: this.name })
     }
 }

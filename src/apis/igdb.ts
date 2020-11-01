@@ -1,13 +1,11 @@
-import { RSA_PSS_SALTLEN_DIGEST } from "constants";
-import { Message, MessageEmbed } from "discord.js";
+import {  MessageEmbed } from "discord.js";
 import { config } from "../config";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
-import { API, APIResponse } from "./baseAPI";
-import { cachePrefixes, redis } from "./cache";
+import { API, DownstreamResponse } from "./baseAPI";
+import { cachePrefixes } from "./cache";
 import { twitch } from "./twitchID";
 
 class IGDBAPI extends API {
-
     private getSearchQuery(title: string): string {
         return `search "${title.replace('"', "\\\"")}";
         fields name,cover.url, summary, game_engines.name, genres.name, platforms.name, first_release_date, rating, similar_games.name, websites.url;
@@ -15,66 +13,28 @@ class IGDBAPI extends API {
         limit 1;`
     }
 
-    async search(msg: Message): Promise<APIResponse> {
-        const parsedMessage = removeHints(msg.content);
-        const game = parsedMessage
-        .split(' ')
-        .slice(1, msg.content.length)
-        .join(' ')
-        .trim()
-        .toLowerCase();
-        const cacheKey = await redis.get(`${cachePrefixes.gameSearch}${game}`);
-
-        let cachedData = null;
-        if (cacheKey) {
-            cachedData = await redis.get(`${cachePrefixes.game}${cacheKey}`)
-        }
-
-        let gameData;
-        if (!cachedData) {
-            this.cacheMissIncrement();
-            try {
-                const token = await twitch.getToken();
-                const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(game), {
-                    headers: {
-                        authorization: `Bearer ${token}`
-                    }
-                });
-                if (data && data.length <= 0) {
-                    redis.multi()
-                        .set(`${cachePrefixes.game}`, JSON.stringify({ response: false }), 'ex', config.CACHE_NOT_FOUND_TTL)
-                        .set(`${cachePrefixes.gameSearch}${game}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
-                        .exec();
-                    return ({ found: false });
-                }
-                gameData = data[0];
-                gameData.response = true;
-
-                redis.multi()
-                    .set(`${cachePrefixes.game}${gameData.name}`, JSON.stringify(gameData))
-                    .set(`${cachePrefixes.gameSearch}${game}`, gameData.name)
-                    .exec();
-            } catch (err) {
-                console.error(err);
-                throw err;
+    async apiSearch(searchTerm: string): Promise<DownstreamResponse> {
+        const token = await twitch.getToken();
+        const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(searchTerm), {
+            headers: {
+                authorization: `Bearer ${token}`
             }
-        } else {
-            this.cacheHitIncrement();
-            gameData = JSON.parse(cachedData);
+        });
+        if (data && data.length <= 0) {
+            return ({
+                response: false,
+                cacheKey: searchTerm
+            });
         }
-        if (!gameData.response) {
-            return ({ found: false });
-        }
-
-        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${gameData.name}`)
 
         return ({
-            found: true,
-            embed: this.validateMessageEmbed(this.getEmbed(gameData, askedBeforeCount))
-        })
+            ...data[0],
+            response: true,
+            cacheKey: data[0].name || searchTerm
+        });
     }
 
-    getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
+    protected getEmbed(data: any, askedBeforeCount: number): MessageEmbed {
 
         const embed = getDefaultEmbed();
         embed.title = data.name ?? '';
@@ -119,5 +79,10 @@ export const igdb = new IGDBAPI({
     defaultHeaders: {
         'Client-ID': config.Twitch.CLIENT_ID,
         Accept: 'application/json'
+    },
+    cachePrefixes: {
+        count: cachePrefixes.count,
+        data: cachePrefixes.game,
+        search: cachePrefixes.gameSearch
     }
 });
