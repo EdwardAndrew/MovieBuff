@@ -9,7 +9,7 @@ export const config = {
     Twitch: {
         BASE_URL: "https://id.twitch.tv/",
         CLIENT_ID: process.env['TWITCH_CLIENT_ID'],
-        CLIENT_SECRET: process.env['TWITCH_CLIENT_SECRET']   
+        CLIENT_SECRET: process.env['TWITCH_CLIENT_SECRET']
     },
     IGDB: {
         BASE_URL: "https://api.igdb.com/v4",
@@ -20,4 +20,6 @@ export const config = {
     CACHE_GLOBAL_PREFIX: 'moviebuff/',
     MAX_DESCRIPTION_LENGTH: 990,
     COMMAND_PREFIX: '!mb',
+    VERSION: '1.0.1',
+    BOT_NAME: 'MovieBuff'
 }

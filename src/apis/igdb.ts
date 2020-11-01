@@ -1,3 +1,4 @@
+import { RSA_PSS_SALTLEN_DIGEST } from "constants";
 import { Message, MessageEmbed } from "discord.js";
 import { config } from "../config";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
@@ -10,34 +11,46 @@ class IGDBAPI extends API {
     private getSearchQuery(title: string): string {
         return `search "${title.replace('"', "\\\"")}";
         fields name,cover.url, summary, game_engines.name, genres.name, platforms.name, first_release_date, rating, similar_games.name, websites.url;
-        where cover != null & summary != null;
+        where cover != null & summary != null & name != null;
         limit 1;`
     }
 
     async search(msg: Message): Promise<APIResponse> {
         const parsedMessage = removeHints(msg.content);
         const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
-        const cacheKey = search.toLowerCase();
-        const cachedData = await redis.get(`${cachePrefixes.game}${cacheKey}`);
-        let gameData;
+        const searchKey = search.toLowerCase();
+        const cacheKey = await redis.get(`${cachePrefixes.gameSearch}${searchKey}`);
 
-        if(!cachedData){
+        let cachedData = null;
+        if (cacheKey) {
+            await redis.get(`${cachePrefixes.game}${cacheKey}`)
+        }
+
+        let gameData;
+        if (!cachedData) {
             this.cacheMissIncrement();
-            try{
+            try {
                 const token = await twitch.getToken();
-                const { data } = await this.axiosInstance.post('/games',this.getSearchQuery(search), {
+                const { data } = await this.axiosInstance.post('/games', this.getSearchQuery(search), {
                     headers: {
                         authorization: `Bearer ${token}`
                     }
                 });
-                if(data && data.length <= 0){ 
-                    redis.set(`${cachePrefixes.game}${cacheKey}`, JSON.stringify({ response: false}), 'ex', config.CACHE_NOT_FOUND_TTL);
-                    return ({found: false});
+                if (data && data.length <= 0) {
+                    redis.multi()
+                        .set(`${cachePrefixes.game}`, JSON.stringify({ response: false }), 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .set(`${cachePrefixes.gameSearch}${searchKey}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .exec();
+                    return ({ found: false });
                 }
                 gameData = data[0];
                 gameData.response = true;
-                redis.set(`${cachePrefixes.game}${cacheKey}`, JSON.stringify(gameData));
-            } catch(err){
+
+                redis.multi()
+                    .set(`${cachePrefixes.gameSearch}${searchKey}`, gameData.name)
+                    .set(`${cachePrefixes.game}${gameData.name}`, JSON.stringify(gameData))
+                    .exec();
+            } catch (err) {
                 console.error(err);
                 throw err;
             }
@@ -45,11 +58,11 @@ class IGDBAPI extends API {
             this.cacheHitIncrement();
             gameData = JSON.parse(cachedData);
         }
-        if(!gameData.response){
+        if (!gameData.response) {
             return ({ found: false });
         }
 
-        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${cacheKey}`)
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${gameData.name}`)
 
         return ({
             found: true,
@@ -64,27 +77,27 @@ class IGDBAPI extends API {
         embed.description = data.summary ?? '';
 
         const steam = (data.websites ?? []).find((website: any) => website.url.indexOf('steampowered') > -1);
-        if(steam){
+        if (steam) {
             embed.url = steam.url;
         }
 
-        if(data.first_release_date){
-            embed.addField('Released', new Date(data.first_release_date*1000).toLocaleDateString(), true);
+        if (data.first_release_date) {
+            embed.addField('Released', new Date(data.first_release_date * 1000).toLocaleDateString(), true);
         }
 
-        if((data.game_engines ?? []).length > 0){
+        if ((data.game_engines ?? []).length > 0) {
             embed.addField('Game Engine', data.game_engines[0].name, true)
         }
-        if((data.genres ?? []).length > 0){
+        if ((data.genres ?? []).length > 0) {
             embed.addField('Genres', data.genres.map((genre: any) => genre.name).join(', '), true)
         }
-        if((data.platforms ?? []).length > 0){
+        if ((data.platforms ?? []).length > 0) {
             embed.addField('Platforms', data.platforms.map((platform: any) => platform.name).join(', '), false)
         }
-        if((data.similar_games ?? []).length >0){
-            embed.addField('Similar Games', data.similar_games.slice(0,7).map((game: any) => game.name).join(', '), true);
+        if ((data.similar_games ?? []).length > 0) {
+            embed.addField('Similar Games', data.similar_games.slice(0, 7).map((game: any) => game.name).join(', '), true);
         }
-        if(data.rating){
+        if (data.rating) {
             embed.addField('Rating', `${Number.parseFloat(data.rating).toFixed(1)}/100`, true);
         }
         embed.setFooter(getAskedBeforeText(askedBeforeCount));

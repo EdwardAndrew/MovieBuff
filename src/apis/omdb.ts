@@ -1,16 +1,19 @@
 import { Message, MessageEmbed } from "discord.js";
-import { API, APIResponse } from "./baseAPI";
+import { API } from "./baseAPI";
 import { config } from '../config';
 import { removeHints, getAskedBeforeText, getDefaultEmbed } from "../utils";
 import { redis, cachePrefixes } from './cache';
-import { cache_hits, cache_misses } from "../metrics";
 
 class OMDBApi extends API {
     async search(msg: Message) {
         const parsedMessage = removeHints(msg.content);
         const movie = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
-        const cacheKey = movie.toLowerCase();
-        const cachedData = await redis.get(`${cachePrefixes.movie}${cacheKey}`);
+        const cacheKey = await redis.get(`${cachePrefixes.movieSearch}${movie}`);
+
+        let cachedData = null;
+        if (cacheKey) {
+            cachedData = await redis.get(`${cachePrefixes.movie}${cacheKey}`);
+        };
 
         let movieData;
         if (!cachedData) {
@@ -26,9 +29,16 @@ class OMDBApi extends API {
                 });
                 movieData = data;
                 if (movieData.Response.toLowerCase() == 'false') {
-                    redis.set(`${cachePrefixes.movie}${cacheKey}`, JSON.stringify(movieData), 'ex', config.CACHE_NOT_FOUND_TTL);
+                    redis.multi()
+                        .set(`${cachePrefixes.movie}`, JSON.stringify({ Response: 'false' }), 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .set(`${cachePrefixes.movieSearch}${movie}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .exec()
                 } else {
-                    redis.set(`${cachePrefixes.movie}${cacheKey}`, JSON.stringify(movieData));        
+                    const key = movieData.Title.toLowerCase();
+                    redis.multi()
+                        .set(`${cachePrefixes.movie}${key}`, JSON.stringify(movieData))
+                        .set(`${cachePrefixes.movieSearch}${movie}`, key)
+                        .exec();
                 }
             } catch (err) {
                 console.error(err);
@@ -39,11 +49,11 @@ class OMDBApi extends API {
             this.cacheHitIncrement();
         }
 
-        if(movieData.Response.toLowerCase() == 'false'){
+        if (movieData.Response.toLowerCase() == 'false') {
             return ({ found: false });
         }
 
-        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${movieData.Title}`);
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${movieData.Title.toLowerCase()}`);
 
         return ({
             embed: this.getEmbed(movieData, askedBeforeCount),

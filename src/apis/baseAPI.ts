@@ -47,17 +47,17 @@ export abstract class API {
             name: this.truncateString(field.name || '', 50),
             value: this.truncateString(field.value || '', 200)
         })).slice(0, 26);
-        if(embed.author?.name) embed.author.name = this.truncateString(embed.author.name || '', 256);
+        if (embed.author?.name) embed.author.name = this.truncateString(embed.author.name || '', 256);
         if (embed.description.length < 10) embed.setDescription('No description is available.');
         return embed;
     };
 
     private truncateString(string: string, length: number): string {
-        return string.length > length ? string.slice(0, length-3).trim().concat('...') : string;
+        return string.length > length ? string.slice(0, length - 3).trim().concat('...') : string;
     }
 
     protected cacheHitIncrement() {
-        cache_hits.inc({ api: this.name})
+        cache_hits.inc({ api: this.name })
     }
 
     protected cacheMissIncrement() {

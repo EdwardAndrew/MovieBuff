@@ -1,4 +1,7 @@
 import { MessageEmbed } from "discord.js";
+import { config } from "./config";
+
+export const blankChar = '\u200B';
 
 export enum Hint {
     anime,
@@ -51,15 +54,13 @@ export const getAskedBeforeText = (count: number) => {
             return "I've not been asked about this one before.";
         case 1:
             return "Somebody asked me about this before...";
-        case 2:
-            return "I've been asked about this twice...";
         default:
-            return `I've been asked about this ${count - 1} times...`
+            return `I've been asked about this ${count} times...`
     }
 }
 
 export const getDefaultEmbed = (): MessageEmbed => {
     const embed = new MessageEmbed();
-    embed.setAuthor('MovieBuff', '', 'https://discord.gg/KvVUSA7');
+    embed.setAuthor(config.BOT_NAME, '', 'https://discord.gg/KvVUSA7');
     return embed;
 }

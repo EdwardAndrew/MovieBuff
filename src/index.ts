@@ -14,7 +14,7 @@ client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setPresence({
         activity: {
-            name: "Type !mb help",
+            name: `Type ${config.COMMAND_PREFIX} help`,
             type: "WATCHING",
         }
     });
@@ -22,9 +22,10 @@ client.on('ready', () => {
 });
 
 client.on('message', msg => {
-    if(!botCommandRegEx.test(msg.content)) return;
-    if (msg.member.id == client.user.id) return;
-
+    if(msg.mentions.users.first() != client.user && !botCommandRegEx.test(msg.content)){
+        return;
+    } 
+    if(msg.member.id == client.user.id) return;
     router.route(msg);
 });
 

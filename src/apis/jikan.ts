@@ -9,8 +9,12 @@ class JikanAPI extends API {
 
         const parsedMessage = removeHints(msg.content);
         const search = parsedMessage.split(' ').slice(1, msg.content.length).join(' ').trim();
-        const cacheKey = search.toLowerCase();
-        const cachedData = await redis.get(`${cachePrefixes.anime}${cacheKey}`);
+        const cacheKey = await redis.get(`${cachePrefixes.animeSearch}${search}`);
+        let cachedData = null;
+        if (cacheKey) {
+            cachedData = await redis.get(`${cachePrefixes.anime}${cacheKey}`);
+        }
+
 
         let animeData;
         if (!cachedData) {
@@ -22,12 +26,20 @@ class JikanAPI extends API {
                 const { data } = await this.axiosInstance.get('search/anime', {
                     params
                 });
-                if (data?.results.length || 0 > 0) {
+                if (data?.results.length || 0 > 0 && data.title) {
+
                     animeData = data.results[0];
                     animeData.response = true;
-                    redis.set(`${cachePrefixes.anime}${cacheKey}`, JSON.stringify(animeData));
+                    redis.multi()
+                        .set(`${cachePrefixes.anime}${data.title}`, JSON.stringify(animeData))
+                        .set(`${cachePrefixes.animeSearch}${search}`, data.title)
+                        .exec()
+
                 } else {
-                    redis.set(`${cachePrefixes.anime}${cacheKey}`, JSON.stringify({response: false}), 'ex', config.CACHE_NOT_FOUND_TTL);
+                    redis.multi()
+                        .set(`${cachePrefixes.anime}`, JSON.stringify({ response: false }), 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .set(`${cachePrefixes.animeSearch}${search}`, '', 'ex', config.CACHE_NOT_FOUND_TTL)
+                        .exec();
                 }
             } catch (err) {
                 console.error(err);
@@ -38,11 +50,11 @@ class JikanAPI extends API {
             animeData = JSON.parse(cachedData);
         }
 
-        if(!animeData.response){
+        if (animeData == null || !animeData.response) {
             return ({ found: false })
         }
 
-        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${cacheKey}`);
+        const askedBeforeCount = await redis.incr(`${cachePrefixes.count}${animeData.title}`);
 
         return {
             found: true,

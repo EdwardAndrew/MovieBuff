@@ -2,7 +2,7 @@ import { Message } from 'discord.js';
 
 import { omdb } from '../apis/omdb';
 import { jikan } from '../apis/jikan';
-import { getHints, Hint } from '../utils';
+import { blankChar, getHints, Hint } from '../utils';
 import { API, APIResponse } from '../apis/baseAPI';
 import { igdb } from '../apis/igdb';
 import { search_errored, search_found, search_notFound } from '../metrics';
@@ -15,16 +15,16 @@ export const search = async (msg: Message) => {
         const result: APIResponse = await api.search(msg)
 
         if (!result.found) {
-            msg.channel.send(`I've not heard of that before, sorry!`);
+            msg.channel.send(`${blankChar}I've not heard of that before, sorry!`);
             msg.react('😭');
             search_notFound.inc();
             return;
         };
         search_found.inc();
-        msg.channel.send(`Here's what I can tell you about *${result.embed.title}*`, result.embed);
+        msg.channel.send(`${blankChar}Here's what I can tell you about *${result.embed.title}*`, result.embed);
     } catch (err) {
         console.error(err);
-        msg.channel.send('Oops! We encountered a problem while searching. Please try later!');
+        msg.channel.send(`${blankChar}Oops! We encountered a problem while searching. Please try later!`);
         search_errored.inc();
         return;
     }
