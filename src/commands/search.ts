@@ -1,4 +1,4 @@
-import { Emoji, Message, MessageEmbed, MessageReaction } from 'discord.js';
+import { Message, MessageEmbed, MessageReaction } from 'discord.js';
 
 import { omdb } from '../apis/omdb';
 import { jikan } from '../apis/jikan';
@@ -23,7 +23,7 @@ export const search = async (msg: Message) => {
         search_found.inc();
         const sentMessage: Message = await msg.channel.send(`${blankChar}Here's what I can tell you about *${result.embed.title}*`, result.embed);
         const prevPage = (data: MessageReaction) => {
-           const editedMessageEmbed = new MessageEmbed();
+            const editedMessageEmbed = new MessageEmbed();
             editedMessageEmbed.setDescription('Previous description');
             data.message.edit('This is an edited message', editedMessageEmbed);
         };
@@ -34,15 +34,15 @@ export const search = async (msg: Message) => {
         }
         await addPageReacts(sentMessage);
         sentMessage
-        .createReactionCollector(reactionFilter('◀'), { dispose: true})
-        .on('collect', prevPage)
-        .on('remove', prevPage)
+            .createReactionCollector(reactionFilter('◀'), { dispose: true })
+            .on('collect', prevPage)
+            .on('remove', prevPage)
 
         sentMessage
-        .createReactionCollector(reactionFilter('▶'), { dispose: true})
-        .on('collect', nextPage)
-        .on('remove', nextPage)
-        
+            .createReactionCollector(reactionFilter('▶'), { dispose: true })
+            .on('collect', nextPage)
+            .on('remove', nextPage)
+
     } catch (err) {
         console.error(err);
         msg.channel.send(`${blankChar}Oops! We encountered a problem while searching. Please try later!`);

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import Discord, { Message, MessageEmbed, MessageReaction } from 'discord.js';
+import Discord, { Message } from 'discord.js';
 import './metrics';
 
 import { config } from './config';
@@ -23,10 +23,10 @@ client.on('ready', () => {
 });
 
 client.on('message', (msg: Message) => {
-    if(msg.mentions.users.first() != client.user && !botCommandRegEx.test(msg.content)){
+    if (msg.mentions.users.first() != client.user && !botCommandRegEx.test(msg.content)) {
         return;
-    } 
-    if(msg.member.id == client.user.id) return;
+    }
+    if (msg.member.id == client.user.id) return;
     router.route(msg);
 });
 
