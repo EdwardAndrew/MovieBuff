@@ -1,4 +1,4 @@
-import { Message } from 'discord.js';
+import { Emoji, Message, MessageEmbed, MessageReaction } from 'discord.js';
 
 import { omdb } from '../apis/omdb';
 import { jikan } from '../apis/jikan';
@@ -21,7 +21,28 @@ export const search = async (msg: Message) => {
             return;
         };
         search_found.inc();
-        msg.channel.send(`${blankChar}Here's what I can tell you about *${result.embed.title}*`, result.embed);
+        const sentMessage: Message = await msg.channel.send(`${blankChar}Here's what I can tell you about *${result.embed.title}*`, result.embed);
+        const prevPage = (data: MessageReaction) => {
+           const editedMessageEmbed = new MessageEmbed();
+            editedMessageEmbed.setDescription('Previous description');
+            data.message.edit('This is an edited message', editedMessageEmbed);
+        };
+        const nextPage = (data: MessageReaction) => {
+            const editedMessageEmbed = new MessageEmbed();
+            editedMessageEmbed.setDescription('Next description');
+            data.message.edit('This is an edited message', editedMessageEmbed);
+        }
+        await addPageReacts(sentMessage);
+        sentMessage
+        .createReactionCollector(reactionFilter('◀'), { dispose: true})
+        .on('collect', prevPage)
+        .on('remove', prevPage)
+
+        sentMessage
+        .createReactionCollector(reactionFilter('▶'), { dispose: true})
+        .on('collect', nextPage)
+        .on('remove', nextPage)
+        
     } catch (err) {
         console.error(err);
         msg.channel.send(`${blankChar}Oops! We encountered a problem while searching. Please try later!`);
@@ -29,6 +50,13 @@ export const search = async (msg: Message) => {
         return;
     }
 
+}
+
+const reactionFilter = (emoji: string) => (mr: MessageReaction) => mr.emoji.name == emoji;
+
+const addPageReacts = async (message: Message) => {
+    await message.react('◀')
+    await message.react('▶')
 }
 
 const getAPI = (hint: Hint): API<DownstreamResponse> => {

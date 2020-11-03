@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import Discord from 'discord.js';
+import Discord, { Message, MessageEmbed, MessageReaction } from 'discord.js';
 import './metrics';
 
 import { config } from './config';
@@ -22,7 +22,7 @@ client.on('ready', () => {
     serverGauge.set(client.guilds.cache.size);
 });
 
-client.on('message', msg => {
+client.on('message', (msg: Message) => {
     if(msg.mentions.users.first() != client.user && !botCommandRegEx.test(msg.content)){
         return;
     } 
