@@ -57,7 +57,7 @@ export abstract class API<T extends DownstreamResponse> {
     }
 
     protected abstract getEmbed(data: any, askedBeforeCount: number): MessageEmbed;
-    protected abstract async apiSearch(searchTerm: string): Promise<T>;
+    protected abstract apiSearch(searchTerm: string): Promise<T>;
 
     async search(msg: Message): Promise<APIResponse> {
         const search = removeHints(msg.content)

@@ -6,13 +6,20 @@ import { cachePrefixes } from './cache';
 
 interface OMDBResponse extends DownstreamResponse {
 }
-
 class OMDBApi extends API<OMDBResponse> {
+
+    YearRegEx: RegExp = new RegExp(/-y(ear)?\s\d\d\d\d/)
+
     async apiSearch(searchTerm: string): Promise<OMDBResponse> {
+        const regexResults = this.YearRegEx.exec(searchTerm);
+        const year = regexResults ? regexResults[0].replace(/-y(ear)?\s/,'') : '';
+
         const params = {
-            t: searchTerm,
-            plot: 'full'
+            t: searchTerm.replace(this.YearRegEx, '').trim(),
+            plot: 'full',
+            y: year
         }
+
         const { data } = await this.axiosInstance.get('/', {
             params
         });
