@@ -37,6 +37,8 @@ const getHelpEmbed = () => {
     embed.addField('Anime Search', '`!mb !anime Toradora!`', false);
     embed.addField('Game Search', '`!mb !game World of Warcraft`', false);
     embed.addField('Movie Search', '`!mb !movie Inception`', false);
+    embed.addField('Movie Search', '`!mb !movie War of the worlds -year 1953`', false);
+    embed.addField('Movie Search', '`!mb !movie War of the worlds -y 1953`', false);
     embed.addField('Prefix Hint', `<@${config.CLIENT_ID}>\` what\'s your prefix?\``, false);
     embed.addField('Bot Information & Support', '`!mb info`', false);
     return embed;

@@ -20,7 +20,7 @@ export const config = {
     CACHE_GLOBAL_PREFIX: 'moviebuff/',
     MAX_DESCRIPTION_LENGTH: 990,
     COMMAND_PREFIX: '!mb',
-    VERSION: '1.0.1',
+    VERSION: '1.1.1',
     BOT_NAME: 'MovieBuff',
     CLIENT_ID: ''
 }
