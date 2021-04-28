@@ -26,13 +26,19 @@ class OMDBApi extends API<OMDBResponse> {
         if (data.Response.toLowerCase() == 'false') {
             return ({
                 response: false,
-                cacheKey: searchTerm
+                cacheKey: {
+                    searchTerm,
+                    y: year
+                }
             })
         };
         return ({
             ...data,
             response: true,
-            cacheKey: data.Title.toLowerCase() || searchTerm
+            cacheKey: {
+                searchTerm: data.Title.toLowerCase() || searchTerm,
+                y: year
+            }
         })
     }
 

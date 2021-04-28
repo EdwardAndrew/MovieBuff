@@ -31,7 +31,10 @@ export type APIResponse = {
 
 export interface DownstreamResponse {
     response: boolean;
-    cacheKey: string;
+    cacheKey: {
+        searchTerm: string;
+        [key: string]: string;
+    };
     [key: string]: any;
 }
 
@@ -71,7 +74,8 @@ export abstract class API<T extends DownstreamResponse> {
         if (!serialisedData.response) {
             return ({ found: false })
         }
-        const askedBeforeCount = await redis.incr(`${this.countCachePrefix}${serialisedData.cacheKey}`);
+        
+        const askedBeforeCount = await redis.incr(`${this.countCachePrefix}${JSON.stringify(serialisedData.cacheKey.searchTerm)}`);
 
         return ({
             embed: this.validateMessageEmbed(this.getEmbed(serialisedData, askedBeforeCount)),
@@ -96,8 +100,8 @@ export abstract class API<T extends DownstreamResponse> {
                 .exec()
         } else {
             redis.multi()
-                .set(`${this.dataCachePrefix}${fetchedData.cacheKey}`, JSON.stringify(fetchedData))
-                .set(`${this.searchCachePrefix}${search}`, fetchedData.cacheKey)
+                .set(`${this.dataCachePrefix}${JSON.stringify(fetchedData.cacheKey)}`, JSON.stringify(fetchedData))
+                .set(`${this.searchCachePrefix}${search}`, JSON.stringify(fetchedData.cacheKey))
                 .exec();
         }
         return fetchedData;

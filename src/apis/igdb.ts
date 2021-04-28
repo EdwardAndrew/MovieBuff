@@ -1,4 +1,4 @@
-import {  MessageEmbed } from "discord.js";
+import { MessageEmbed } from "discord.js";
 import { config } from "../config";
 import { getAskedBeforeText, getDefaultEmbed, removeHints } from "../utils";
 import { API, DownstreamResponse } from "./baseAPI";
@@ -26,14 +26,16 @@ class IGDBAPI extends API<IGDBResponse> {
         if (data && data.length <= 0) {
             return ({
                 response: false,
-                cacheKey: searchTerm
+                cacheKey: { searchTerm }
             });
         }
 
         return ({
             ...data[0],
             response: true,
-            cacheKey: data[0].name || searchTerm
+            cacheKey: {
+                searchTerm: data[0].name || searchTerm
+            }
         });
     }
 

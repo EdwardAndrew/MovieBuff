@@ -20,13 +20,17 @@ class JikanAPI extends API<JikanResponse> {
             return ({
                 ...data.results[0],
                 response: true,
-                cacheKey: data.results[0].title || searchTerm
+                cacheKey: { 
+                    searchTerm: data.results[0].title || searchTerm
+                } 
             })
         };
 
         return ({
             response: false,
-            cacheKey: searchTerm
+            cacheKey: {
+                searchTerm
+            }
         })
     }
 
