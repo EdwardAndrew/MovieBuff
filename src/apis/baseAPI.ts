@@ -75,7 +75,7 @@ export abstract class API<T extends DownstreamResponse> {
             return ({ found: false })
         }
         
-        const askedBeforeCount = await redis.incr(`${this.countCachePrefix}${JSON.stringify(serialisedData.cacheKey.searchTerm)}`);
+        const askedBeforeCount = await redis.incr(`${this.countCachePrefix}${serialisedData.cacheKey.searchTerm}`);
 
         return ({
             embed: this.validateMessageEmbed(this.getEmbed(serialisedData, askedBeforeCount)),
