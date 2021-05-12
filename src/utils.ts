@@ -27,11 +27,15 @@ const hintMap: HintMap = {
     videogame: Hint.game
 }
 
-export const removeHints = (command: string): string => {
-    const foundHints = command.split(' ').filter((word: string) => {
-        if (!word.startsWith('!') || word.length <= 1) return false;
+const getHintsInString = (command: string): string[] => command
+      .split(' ')
+      .filter((word: string) => {
+        if (!word.startsWith('-') || word.length <= 1) return false;
         return Object.keys(hintMap).includes(word.slice(1, word.length));
-    });
+      })
+
+export const removeHints = (command: string): string => {
+    const foundHints = getHintsInString(command);
 
     let result = command;
     for (let hint of foundHints) {
@@ -41,10 +45,7 @@ export const removeHints = (command: string): string => {
 }
 
 export const getHints = (command: string): Hint[] => {
-    const givenHints = command.split(' ').filter((word: string) => {
-        if (!word.startsWith('!') || word.length <= 1) return false;
-        return Object.keys(hintMap).includes(word.slice(1, word.length));
-    });
+    const givenHints = getHintsInString(command);
     return givenHints.map((hint: string) => hintMap[hint.slice(1, hint.length)]);
 }
 
@@ -61,6 +62,5 @@ export const getAskedBeforeText = (count: number) => {
 
 export const getDefaultEmbed = (): MessageEmbed => {
     const embed = new MessageEmbed();
-    embed.setAuthor(config.BOT_NAME, '', 'https://discord.gg/KvVUSA7');
     return embed;
 }
