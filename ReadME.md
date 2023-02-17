@@ -2,6 +2,6 @@
 
 Ask MovieBuff about Movies!
 
-`!mb <Movie Name>`
+ `!mb <Movie Name>`
 
 [OMDB API](http://www.omdbapi.com)
